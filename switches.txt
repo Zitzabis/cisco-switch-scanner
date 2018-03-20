@@ -1,0 +1,1 @@
+[place switch hostname/IP on separate lines]
