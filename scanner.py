@@ -56,6 +56,7 @@ def checkPorts():
     
     # Run a command
     def gatherInfo(ip):
+        gathered = False
         # Init list for port info
         rows = []
         # Init true list for overview checker
@@ -73,6 +74,7 @@ def checkPorts():
                 if (line != '\r\n'): # Scrape off fluff
                     rows.append(line) # Add line to list
             rows.pop(0) # Remove header entry
+            gathered = True
         else:
             global telnet
             telnet.write("show int status\n".encode())
@@ -81,53 +83,60 @@ def checkPorts():
             results = (telnet.read_all()).decode()
             rows = results.splitlines()
             # Remove fluff rows
-            rows.pop(0)
-            rows.pop(0)
-            rows.pop(0)
-            rows.pop(0)
-            rows.pop(0)
-            rows.pop()
-            rows.pop()
-
-        # Create any needed switch folders
-        if not os.path.exists("ports/" + ip):
-            os.makedirs("ports/" + ip)
-
-        # Format each port entry in list and write to file
-        for line in rows:
-            # Extract and format port name for file name system
-            port = line.split(" ")[0]
-            port = port.replace("/", "_")
-
-            # Extract connected status
-            if "connected" in line:
-                status = True
-            if "notconnect" in line:
-                status = False
-
-            # Compile timestamp and connection status into string
-            results = str(datetime.now()) + "\t" + str(status) + "\n"
-
-            # Determine if the file exists or not
-            # Then open file, write/append, close
-            if not(os.path.exists("ports/" + ip + "/" + port + ".txt")):
-                f = open("ports/" + ip + "/" + port + ".txt","w+")
-                f.write(results)
-                f.close
+            if ('^' not in results):
+                rows.pop(0)
+                rows.pop(0)
+                rows.pop(0)
+                rows.pop(0)
+                rows.pop(0)
+                rows.pop()
+                rows.pop()
+                gathered = True
             else:
-                f = open("ports/" + ip + "/" + port + ".txt","a+")
-                f.write(results)
-                f.close
+                print ("Data fetch failed due to 'Invalid input detected error'")
+                gathered = False
 
-            if status:
-                trues.append(port)
-            else:
-                falses.append(port)
+        if (gathered):
 
-        print ("Updating overview...")
-        updateOverviews(ip, trues, falses)
+            # Create any needed switch folders
+            if not os.path.exists("ports/" + ip):
+                os.makedirs("ports/" + ip)
 
-        print ("Check completed.")
+            # Format each port entry in list and write to file
+            for line in rows:
+                # Extract and format port name for file name system
+                port = line.split(" ")[0]
+                port = port.replace("/", "_")
+
+                # Extract connected status
+                if "connected" in line:
+                    status = True
+                if "notconnect" in line:
+                    status = False
+
+                # Compile timestamp and connection status into string
+                results = str(datetime.now()) + "\t" + str(status) + "\n"
+
+                # Determine if the file exists or not
+                # Then open file, write/append, close
+                if not(os.path.exists("ports/" + ip + "/" + port + ".txt")):
+                    f = open("ports/" + ip + "/" + port + ".txt","w+")
+                    f.write(results)
+                    f.close
+                else:
+                    f = open("ports/" + ip + "/" + port + ".txt","a+")
+                    f.write(results)
+                    f.close
+
+                if status:
+                    trues.append(port)
+                else:
+                    falses.append(port)
+
+            print ("Updating overview...")
+            updateOverviews(ip, trues, falses)
+
+            print ("Check completed.")
 
     # Connect to switch
     def connect(ip):
